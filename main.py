@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS products (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     filename TEXT,
     product_type TEXT,
+    caption TEXT,
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
 )
 """)
@@ -41,7 +42,7 @@ async def callback_handler(event):
     product_type = event.data.decode()
     user_selected[user_id] = product_type
     await event.answer(f"You selected: {product_type}", alert=True)
-    await event.respond(f"សូមផ្ញើរូបភាពសម្រាប់ {product_type} បន្ទាប់ពីនេះ")
+    await event.respond(f"សូមផ្ញើរូបភាពសម្រាប់ {product_type} បន្ទាប់ពីនេះ (អាចដាក់ Caption)")
 
 # Handle photo from private chat or group
 @client.on(events.NewMessage(func=lambda e: e.photo, chats=[GROUP_ID, None]))
@@ -49,21 +50,22 @@ async def handle_image(event):
     sender = await event.get_sender()
     user_id = sender.id
 
-    # ប្រភេទ Product
-    product_type = user_selected.get(user_id, "អាវ")  # default if not selected
+    product_type = user_selected.get(user_id, "អាវ")  # default
+    caption = event.raw_text if event.raw_text else ""  # caption from message
 
     filename = f"{event.id}.jpg"
-    filepath = os.path.join(".", filename)  # save to root folder
+    filepath = os.path.join(".", filename)
     await event.download_media(filepath)
 
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    c.execute("INSERT INTO products (filename, product_type) VALUES (?, ?)", (filename, product_type))
+    c.execute("INSERT INTO products (filename, product_type, caption) VALUES (?, ?, ?)",
+              (filename, product_type, caption))
     conn.commit()
     conn.close()
 
     user_selected.pop(user_id, None)
-    await event.respond(f"✔ រូបភាពសម្រាប់ {product_type} បានរក្សាទុក")
+    await event.respond(f"✔ រូបភាពសម្រាប់ {product_type} បានរក្សាទុក\nCaption: {caption}")
 
 # ---------------- FLASK APP ----------------
 app = Flask(__name__, template_folder=".")
@@ -71,19 +73,19 @@ app = Flask(__name__, template_folder=".")
 def get_items():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    c.execute("SELECT filename, product_type, timestamp FROM products ORDER BY timestamp DESC")
+    c.execute("SELECT filename, product_type, caption, timestamp FROM products ORDER BY timestamp DESC")
     all_items = c.fetchall()
     conn.close()
 
     latest_per_type = {}
-    for filename, product_type, ts in all_items:
+    for filename, product_type, caption, ts in all_items:
         if product_type not in latest_per_type:
             latest_per_type[product_type] = filename
 
     items = []
-    for filename, product_type, ts in all_items:
+    for filename, product_type, caption, ts in all_items:
         new_flag = 'new' if latest_per_type[product_type] == filename else ''
-        items.append((filename, product_type, new_flag))
+        items.append((filename, product_type, caption, new_flag))
     return items
 
 @app.route("/")
