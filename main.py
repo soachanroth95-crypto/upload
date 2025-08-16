@@ -1,7 +1,7 @@
 import os
 import threading
 import sqlite3
-from flask import Flask, render_template, request, abort
+from flask import Flask, send_from_directory, request, abort
 from telethon import TelegramClient, events, Button
 
 # ---------------- CONFIG ----------------
@@ -67,58 +67,17 @@ async def handle_image(event):
     await event.respond(f"Saved image for {product_type}")
 
 # ---------------- FLASK APP ----------------
-app = Flask(__name__, static_folder=IMAGE_DIR, template_folder="templates")
+app = Flask(__name__)
 app.secret_key = "supersecretkey"
-
-def get_items():
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("SELECT filename, product_type, timestamp FROM products ORDER BY timestamp DESC")
-    all_items = c.fetchall()
-    conn.close()
-
-    latest_per_type = {}
-    for filename, product_type, ts in all_items:
-        if product_type not in latest_per_type:
-            latest_per_type[product_type] = filename
-
-    items = []
-    for filename, product_type, ts in all_items:
-        new_flag = 'new' if latest_per_type[product_type] == filename else ''
-        items.append((filename, product_type, new_flag))
-    return items
 
 @app.route("/")
 def index():
-    items = get_items()
-    carousel_images = items[:5]
-    return render_template("index.html", items=items, products=PRODUCT_OPTIONS, carousel_images=carousel_images)
+    # Serve index.html from the same directory as main.py
+    return send_from_directory(".", "index.html")
 
-@app.route("/view")
-def view():
-    img = request.args.get("img")
-    if not img:
-        return "No image specified", 400
-
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("SELECT product_type FROM products WHERE filename=?", (img,))
-    row = c.fetchone()
-    if not row:
-        conn.close()
-        return "Image not found", 404
-    product_type = row[0]
-
-    c.execute("SELECT filename, timestamp FROM products WHERE product_type=? ORDER BY timestamp DESC", (product_type,))
-    related_raw = c.fetchall()
-    conn.close()
-
-    latest_file = related_raw[0][0] if related_raw else ''
-    related_images = [(r[0], 'new' if r[0] == latest_file else '') for r in related_raw]
-
-    return render_template("view.html", img=img, product_type=product_type,
-                           related_images=[r[0] for r in related_images], products=PRODUCT_OPTIONS,
-                           carousel_images=related_images)
+@app.route("/uploads/<path:filename>")
+def uploaded_file(filename):
+    return send_from_directory(IMAGE_DIR, filename)
 
 @app.route("/delete_product/<int:product_id>", methods=["DELETE"])
 def delete_product(product_id):
@@ -144,9 +103,6 @@ def run_bot():
     client.run_until_disconnected()
 
 if __name__ == "__main__":
-    # Run Telethon bot in background
     threading.Thread(target=run_bot, daemon=True).start()
-
-    # Run Flask in main thread (Render health check works)
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=False, use_reloader=False)
