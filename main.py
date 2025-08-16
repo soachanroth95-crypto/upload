@@ -12,7 +12,6 @@ IMAGE_DIR = "uploads"
 PRODUCT_OPTIONS = ["អាវ", "កាបូប", "ស្បែកជើង"]
 DB_PATH = "products.db"
 
-# Ensure upload folder exists
 os.makedirs(IMAGE_DIR, exist_ok=True)
 
 # ---------------- DATABASE ----------------
@@ -92,7 +91,7 @@ def get_items():
 @app.route("/")
 def index():
     items = get_items()
-    carousel_images = items[:5]  # latest 5 for carousel
+    carousel_images = items[:5]
     return render_template("index.html", items=items, products=PRODUCT_OPTIONS, carousel_images=carousel_images)
 
 @app.route("/view")
@@ -114,9 +113,8 @@ def view():
     related_raw = c.fetchall()
     conn.close()
 
-    # Determine latest per type
     latest_file = related_raw[0][0] if related_raw else ''
-    related_images = [(r[0], 'new' if r[0]==latest_file else '') for r in related_raw]
+    related_images = [(r[0], 'new' if r[0] == latest_file else '') for r in related_raw]
 
     return render_template("view.html", img=img, product_type=product_type,
                            related_images=[r[0] for r in related_images], products=PRODUCT_OPTIONS,
@@ -140,11 +138,15 @@ def delete_product(product_id):
         os.remove(filepath)
     return '', 200
 
-# ---------------- RUN FLASK ----------------
-def run_flask():
-    app.run(host="0.0.0.0", port=5000, debug=False, use_reloader=False)
-
-if __name__ == "__main__":
-    threading.Thread(target=run_flask, daemon=True).start()
+# ---------------- RUN BOTH ----------------
+def run_bot():
     print("Bot running...")
     client.run_until_disconnected()
+
+if __name__ == "__main__":
+    # Run Telethon bot in background
+    threading.Thread(target=run_bot, daemon=True).start()
+
+    # Run Flask in main thread (Render health check works)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False, use_reloader=False)
