@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Uploaded Products</title>
 <style>
+/* ដូច CSS ចាស់ */
 body { font-family:'Khmer OS Battambang',sans-serif; margin:0; background:#f4f6f8; color:#333; display:flex; justify-content:center; }
 .container { width:85%; max-width:500px; background:#fff; border-radius:20px; padding:20px; box-shadow:0 10px 25px rgba(0,0,0,0.08); }
 h1 {text-align:center; margin-bottom:15px; color:#2c3e50; font-size:1.8em;}
@@ -22,60 +23,17 @@ h1 {text-align:center; margin-bottom:15px; color:#2c3e50; font-size:1.8em;}
 .card img {width:100%; height:130px; object-fit:cover; display:block; transition: transform 0.3s;}
 .card:hover img {transform: scale(1.05);}
 .card strong {display:block; margin:6px 0 10px 0; color:#34495e; font-weight:bold; font-size:13px;}
-.card .new-label {
-        position:absolute;
-        top:6px;
-        right:6px;
-        background:red;
-        color:#fff;
-        font-size:10px;
-        font-weight:bold;
-        padding:2px 4px;
-        border-radius:4px;
-        z-index:10;
-        animation: bounce 1s infinite alternate;
-    }
-    @keyframes bounce {
-        0%   { transform: translateY(0) scale(1); }
-        50%  { transform: translateY(-5px) scale(1.1); }
-        100% { transform: translateY(0) scale(1); }
-    }
-    .card .overlay {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0,0,0,0.4); /* semi-transparent black */
-        color: #fff;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        opacity: 0; /* លាក់ពីដើម */
-        transition: opacity 0.5s ease, transform 0.5s ease;
-        font-size: 12px;
-        pointer-events: none;
-        transform: scale(0.8);
-    }
-
-    /* បង្ហាញ overlay និង zoom icon smoothly ពេល hover */
-    .card:hover img {
-        transform: scale(1.05);
-        filter: brightness(60%);
-    }
-    .card:hover .overlay {
-        opacity: 1;
-        transform: scale(1);
-    }
+.card .new-label {position:absolute;top:6px;right:6px;background:red;color:#fff;font-size:10px;font-weight:bold;padding:2px 4px;border-radius:4px;z-index:10;animation: bounce 1s infinite alternate;}
+@keyframes bounce {0%{transform: translateY(0) scale(1);}50%{transform: translateY(-5px) scale(1.1);}100%{transform: translateY(0) scale(1);}}
+.card .overlay {position: absolute;top: 0;left: 0;width: 100%;height: 100%;background: rgba(0,0,0,0.4);color: #fff;display: flex;justify-content: center;align-items: center;opacity: 0;transition: opacity 0.5s ease, transform 0.5s ease;font-size: 12px;pointer-events: none;transform: scale(0.8);}
+.card:hover img {transform: scale(1.05);filter: brightness(60%);}
+.card:hover .overlay {opacity: 1;transform: scale(1);}
 #search { display:block; width:90%; max-width:350px; margin:15px auto 20px auto; padding:10px 15px; font-size:14px; border-radius:50px; border:1px solid #ccc; outline:none; }
 #search:focus {border-color:#3498db; box-shadow:0 0 6px rgba(52,152,219,0.4);}
 @media(max-width:768px){ .grid{grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;} .topbar .nav-buttons { display:none; flex-direction:column; position:absolute; top:50px; right:10px; background:#2980b9; padding:10px; border-radius:10px;} .topbar .nav-buttons button { margin:5px 0; width:100%; } .hamburger { display:flex; } .card img{height:100px;} }
-
-
-    .navbar{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-bottom:15px;}
-    .navbar button{padding:8px 16px;border:none;border-radius:8px;background:#024A57;color:#fff;cursor:pointer;transition:0.3s;}
-    .navbar button:hover,.navbar button.active{background:#2980b9;}
-    
+.navbar{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-bottom:15px;}
+.navbar button{padding:8px 16px;border:none;border-radius:8px;background:#024A57;color:#fff;cursor:pointer;transition:0.3s;}
+.navbar button:hover,.navbar button.active{background:#2980b9;}
 </style>
 </head>
 <body>
@@ -83,7 +41,7 @@ h1 {text-align:center; margin-bottom:15px; color:#2c3e50; font-size:1.8em;}
 
 <div class="topbar">
     <div class="logo">
-        <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo"> MyShop
+        <img src="logo.png" alt="Logo"> MyShop
     </div>
     <div class="hamburger" onclick="toggleMenu()"><div></div><div></div><div></div></div>
     <div class="nav-buttons" id="mobileMenu">
@@ -98,7 +56,6 @@ h1 {text-align:center; margin-bottom:15px; color:#2c3e50; font-size:1.8em;}
     <div class="navbar">
       <button onclick="filterProducts('All')" class="active">All</button>
       {% for p in products %}<button onclick="filterProducts('{{p}}')">{{p}}</button>{% endfor %}
-
     </div>
 <div class="grid" id="product-grid">
     {% for filename, product_type, new_flag in items %}
@@ -106,8 +63,8 @@ h1 {text-align:center; margin-bottom:15px; color:#2c3e50; font-size:1.8em;}
         {% if new_flag=='new' %}
         <div class="new-label">New</div>
         {% endif %}
-        <img src="{{ url_for('static', filename=filename) }}" alt="{{filename}}">
-           <div class="overlay">👁 View</div> <!-- Icon លាក់ដោយ default -->
+        <img src="{{ filename }}" alt="{{filename}}">
+        <div class="overlay">👁 View</div>
         <strong>{{ product_type }}</strong>
     </div>
     {% endfor %}
@@ -136,9 +93,6 @@ document.getElementById('search').addEventListener('input',()=>filterProducts(ac
 function openViewPage(filename){
     window.location.href = `/view?img=${encodeURIComponent(filename)}`;
 }
-
-  
-    
 </script>
 
 </div>
