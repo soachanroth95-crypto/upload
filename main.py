@@ -1,18 +1,19 @@
 import os
 import threading
 import sqlite3
-from flask import Flask, send_from_directory, request, abort
+from flask import Flask, render_template, request, abort
 from telethon import TelegramClient, events, Button
 
 # ---------------- CONFIG ----------------
 API_ID = 28013497
 API_HASH = "3bd0587beedb80c8336bdea42fc67e27"
 BOT_TOKEN = "7743936268:AAF7thUNZlCx5nSZnvdXG3t2XF2BbcYpEw8"
-IMAGE_DIR = "uploads"
 PRODUCT_OPTIONS = ["អាវ", "កាបូប", "ស្បែកជើង"]
 DB_PATH = "products.db"
 
-os.makedirs(IMAGE_DIR, exist_ok=True)
+# បញ្ជាក់ GROUP ID (អាចជា @username ឬលេខ int)
+GROUP_ID = "@uploadimge"
+
 
 # ---------------- DATABASE ----------------
 conn = sqlite3.connect(DB_PATH)
@@ -45,16 +46,21 @@ async def callback_handler(event):
     await event.answer(f"You selected: {product_type}", alert=True)
     await event.respond(f"សូមផ្ញើរូបភាពសម្រាប់ {product_type} បន្ទាប់ពីនេះ")
 
-@client.on(events.NewMessage(func=lambda e: e.photo))
+# Handle photo from private chat or group
+@client.on(events.NewMessage(func=lambda e: e.photo, chats=None))
 async def handle_image(event):
-    user_id = event.sender_id
+    sender = await event.get_sender()
+    user_id = sender.id
+
+    # ករណី Private Chat
     product_type = user_selected.get(user_id)
+
+    # ករណី Group Chat (use default type or detect)
     if not product_type:
-        await event.respond("សូមជ្រើស Product មុនផ្ញើរូបភាព!")
-        return
+        product_type = "អាវ"  # អ្នកអាចដាក់ default ឬ detect ពី caption
 
     filename = f"{event.id}.jpg"
-    filepath = os.path.join(IMAGE_DIR, filename)
+    filepath = os.path.join(".", filename)  # save ទៅ root folder
     await event.download_media(filepath)
 
     conn = sqlite3.connect(DB_PATH)
@@ -67,42 +73,47 @@ async def handle_image(event):
     await event.respond(f"Saved image for {product_type}")
 
 # ---------------- FLASK APP ----------------
-app = Flask(__name__)
-app.secret_key = "supersecretkey"
+app = Flask(__name__, template_folder=".")
+
+def get_items():
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT filename, product_type, timestamp FROM products ORDER BY timestamp DESC")
+    all_items = c.fetchall()
+    conn.close()
+
+    latest_per_type = {}
+    for filename, product_type, ts in all_items:
+        if product_type not in latest_per_type:
+            latest_per_type[product_type] = filename
+
+    items = []
+    for filename, product_type, ts in all_items:
+        new_flag = 'new' if latest_per_type[product_type] == filename else ''
+        items.append((filename, product_type, new_flag))
+    return items
 
 @app.route("/")
 def index():
-    # Serve index.html from the same directory as main.py
-    return send_from_directory(".", "index.html")
+    items = get_items()
+    products_html = "".join([f"<li>{p}</li>" for p in PRODUCT_OPTIONS])
+    items_html = "".join([
+        f"<div class='product-card'><img src='{filename}' alt='{product_type}'><br>"
+        f"{product_type} {'<span class=\"new-label\">New</span>' if new_flag=='new' else ''}</div>"
+        for filename, product_type, new_flag in items
+    ])
 
-@app.route("/uploads/<path:filename>")
-def uploaded_file(filename):
-    return send_from_directory(IMAGE_DIR, filename)
+    with open("index.html") as f:
+        html_template = f.read()
 
-@app.route("/delete_product/<int:product_id>", methods=["DELETE"])
-def delete_product(product_id):
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("SELECT filename FROM products WHERE id=?", (product_id,))
-    row = c.fetchone()
-    if not row:
-        conn.close()
-        return abort(404)
-    filename = row[0]
-    c.execute("DELETE FROM products WHERE id=?", (product_id,))
-    conn.commit()
-    conn.close()
-    filepath = os.path.join(IMAGE_DIR, filename)
-    if os.path.exists(filepath):
-        os.remove(filepath)
-    return '', 200
+    html_output = html_template.replace("{{products}}", products_html).replace("{{items}}", items_html)
+    return html_output
 
-# ---------------- RUN BOTH ----------------
-def run_bot():
-    print("Bot running...")
-    client.run_until_disconnected()
+# ---------------- RUN FLASK ----------------
+def run_flask():
+    app.run(host="0.0.0.0", port=5000, debug=False, use_reloader=False)
 
 if __name__ == "__main__":
-    threading.Thread(target=run_bot, daemon=True).start()
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=False, use_reloader=False)
+    threading.Thread(target=run_flask, daemon=True).start()
+    print("Bot running...")
+    client.run_until_disconnected()
