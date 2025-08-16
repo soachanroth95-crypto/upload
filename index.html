@@ -1,100 +1,34 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="km">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Uploaded Products</title>
-<style>
-/* ដូច CSS ចាស់ */
-body { font-family:'Khmer OS Battambang',sans-serif; margin:0; background:#f4f6f8; color:#333; display:flex; justify-content:center; }
-.container { width:85%; max-width:500px; background:#fff; border-radius:20px; padding:20px; box-shadow:0 10px 25px rgba(0,0,0,0.08); }
-h1 {text-align:center; margin-bottom:15px; color:#2c3e50; font-size:1.8em;}
-.topbar { display:flex; justify-content:space-between; align-items:center; background:#3498db; padding:10px 20px; color:#fff; border-radius:15px; position:sticky; top:0; z-index:1000; }
-.topbar .logo { font-weight:bold; font-size:18px; display:flex; align-items:center; gap:8px;}
-.topbar .logo img { height:30px; border-radius:5px; }
-.topbar .nav-buttons { display:flex; gap:6px; }
-.topbar .nav-buttons button { padding:6px 12px; border:none; border-radius:50px; background:linear-gradient(45deg,#2980b9,#1c5980); color:#fff; cursor:pointer; font-size:13px; transition:0.3s; }
-.topbar .nav-buttons button.active, .topbar .nav-buttons button:hover { background:linear-gradient(45deg,#1c5980,#1c4a6b); transform:scale(1.05); }
-.hamburger { display:none; flex-direction:column; gap:4px; cursor:pointer; }
-.hamburger div { width:25px; height:3px; background:#fff; border-radius:2px; }
-.grid {display:grid; grid-template-columns: repeat(auto-fit,minmax(150px,1fr)); gap:12px;}
-.card {background:#fff; border-radius:12px; overflow:hidden; box-shadow:0 6px 12px rgba(0,0,0,0.08); text-align:center; position:relative; cursor:pointer; transition: transform 0.3s, box-shadow 0.3s;}
-.card:hover {transform: translateY(-4px) scale(1.02); box-shadow: 0 14px 28px rgba(0,0,0,0.15);}
-.card img {width:100%; height:130px; object-fit:cover; display:block; transition: transform 0.3s;}
-.card:hover img {transform: scale(1.05);}
-.card strong {display:block; margin:6px 0 10px 0; color:#34495e; font-weight:bold; font-size:13px;}
-.card .new-label {position:absolute;top:6px;right:6px;background:red;color:#fff;font-size:10px;font-weight:bold;padding:2px 4px;border-radius:4px;z-index:10;animation: bounce 1s infinite alternate;}
-@keyframes bounce {0%{transform: translateY(0) scale(1);}50%{transform: translateY(-5px) scale(1.1);}100%{transform: translateY(0) scale(1);}}
-.card .overlay {position: absolute;top: 0;left: 0;width: 100%;height: 100%;background: rgba(0,0,0,0.4);color: #fff;display: flex;justify-content: center;align-items: center;opacity: 0;transition: opacity 0.5s ease, transform 0.5s ease;font-size: 12px;pointer-events: none;transform: scale(0.8);}
-.card:hover img {transform: scale(1.05);filter: brightness(60%);}
-.card:hover .overlay {opacity: 1;transform: scale(1);}
-#search { display:block; width:90%; max-width:350px; margin:15px auto 20px auto; padding:10px 15px; font-size:14px; border-radius:50px; border:1px solid #ccc; outline:none; }
-#search:focus {border-color:#3498db; box-shadow:0 0 6px rgba(52,152,219,0.4);}
-@media(max-width:768px){ .grid{grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;} .topbar .nav-buttons { display:none; flex-direction:column; position:absolute; top:50px; right:10px; background:#2980b9; padding:10px; border-radius:10px;} .topbar .nav-buttons button { margin:5px 0; width:100%; } .hamburger { display:flex; } .card img{height:100px;} }
-.navbar{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-bottom:15px;}
-.navbar button{padding:8px 16px;border:none;border-radius:8px;background:#024A57;color:#fff;cursor:pointer;transition:0.3s;}
-.navbar button:hover,.navbar button.active{background:#2980b9;}
-</style>
+    <meta charset="UTF-8">
+    <title>MyShop</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        header { display: flex; align-items: center; gap: 10px; }
+        header img { height: 50px; }
+        .product-list { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 20px; }
+        .product-card { border: 1px solid #ddd; padding: 10px; width: 150px; text-align: center; }
+        .product-card img { width: 100%; height: auto; }
+        .new-label { color: red; font-weight: bold; }
+    </style>
 </head>
 <body>
-<div class="container">
 
-<div class="topbar">
-    <div class="logo">
-        <img src="logo.png" alt="Logo"> MyShop
-    </div>
-    <div class="hamburger" onclick="toggleMenu()"><div></div><div></div><div></div></div>
-    <div class="nav-buttons" id="mobileMenu">
-        <button onclick="filterProducts('All')" class="active">All</button>
-        {% for p in products %}
-        <button onclick="filterProducts('{{p}}')">{{p}}</button>
-        {% endfor %}
-    </div>
-</div>
-    
-<input type="text" id="search" placeholder="Search filename or type...">
-    <div class="navbar">
-      <button onclick="filterProducts('All')" class="active">All</button>
-      {% for p in products %}<button onclick="filterProducts('{{p}}')">{{p}}</button>{% endfor %}
-    </div>
-<div class="grid" id="product-grid">
-    {% for filename, product_type, new_flag in items %}
-    <div class="card" data-type="{{product_type}}" data-name="{{filename}}" onclick="openViewPage('{{filename}}')">
-        {% if new_flag=='new' %}
-        <div class="new-label">New</div>
-        {% endif %}
-        <img src="{{ filename }}" alt="{{filename}}">
-        <div class="overlay">👁 View</div>
-        <strong>{{ product_type }}</strong>
-    </div>
-    {% endfor %}
+<header>
+    <img src="logo.png" alt="Logo">
+    <h1>MyShop</h1>
+</header>
+
+<h2>ប្រភេទទំនិញ</h2>
+<ul>
+    {{products}}
+</ul>
+
+<h2>ទំនិញចុងក្រោយ</h2>
+<div class="product-list">
+    {{items}}
 </div>
 
-<script>
-function toggleMenu() {
-    const menu = document.getElementById('mobileMenu');
-    menu.style.display = menu.style.display==='flex'?'none':'flex';
-}
-let activeType='All';
-function filterProducts(type){
-    activeType=type;
-    document.querySelectorAll('.nav-buttons button').forEach(b=>b.classList.remove('active'));
-    event.target.classList.add('active');
-    const cards=document.querySelectorAll('#product-grid .card');
-    const searchVal=document.getElementById('search').value.toLowerCase();
-    cards.forEach(c=>{
-        const name=c.dataset.name.toLowerCase();
-        const typeMatch=(activeType==='All'||c.dataset.type===activeType);
-        const searchMatch=name.includes(searchVal)||c.dataset.type.toLowerCase().includes(searchVal);
-        c.style.display=(typeMatch && searchMatch)?'block':'none';
-    });
-}
-document.getElementById('search').addEventListener('input',()=>filterProducts(activeType));
-function openViewPage(filename){
-    window.location.href = `/view?img=${encodeURIComponent(filename)}`;
-}
-</script>
-
-</div>
 </body>
 </html>
