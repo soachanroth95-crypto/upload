@@ -1,7 +1,7 @@
 import os
 import threading
 import sqlite3
-from flask import Flask, render_template, request, abort
+from flask import Flask, render_template
 from telethon import TelegramClient, events, Button
 
 # ---------------- CONFIG ----------------
@@ -10,10 +10,7 @@ API_HASH = "3bd0587beedb80c8336bdea42fc67e27"
 BOT_TOKEN = "7743936268:AAF7thUNZlCx5nSZnvdXG3t2XF2BbcYpEw8"
 PRODUCT_OPTIONS = ["អាវ", "កាបូប", "ស្បែកជើង"]
 DB_PATH = "products.db"
-
-# បញ្ជាក់ GROUP ID (អាចជា @username ឬលេខ int)
-GROUP_ID = "@uploadimge"
-
+GROUP_ID = "@uploadimge"  # Group username
 
 # ---------------- DATABASE ----------------
 conn = sqlite3.connect(DB_PATH)
@@ -36,7 +33,7 @@ user_selected = {}  # user_id -> product_type
 @client.on(events.NewMessage(pattern="/upload"))
 async def ask_product(event):
     buttons = [[Button.inline(opt, data=opt.encode()) for opt in PRODUCT_OPTIONS]]
-    await event.respond("សូមជ្រើស Product មុន upload image:", buttons=buttons)
+    await event.respond("សូមជ្រើសប្រភេទ Product មុន upload image:", buttons=buttons)
 
 @client.on(events.CallbackQuery)
 async def callback_handler(event):
@@ -47,20 +44,16 @@ async def callback_handler(event):
     await event.respond(f"សូមផ្ញើរូបភាពសម្រាប់ {product_type} បន្ទាប់ពីនេះ")
 
 # Handle photo from private chat or group
-@client.on(events.NewMessage(func=lambda e: e.photo, chats=None))
+@client.on(events.NewMessage(func=lambda e: e.photo, chats=[GROUP_ID, None]))
 async def handle_image(event):
     sender = await event.get_sender()
     user_id = sender.id
 
-    # ករណី Private Chat
-    product_type = user_selected.get(user_id)
-
-    # ករណី Group Chat (use default type or detect)
-    if not product_type:
-        product_type = "អាវ"  # អ្នកអាចដាក់ default ឬ detect ពី caption
+    # ប្រភេទ Product
+    product_type = user_selected.get(user_id, "អាវ")  # default if not selected
 
     filename = f"{event.id}.jpg"
-    filepath = os.path.join(".", filename)  # save ទៅ root folder
+    filepath = os.path.join(".", filename)  # save to root folder
     await event.download_media(filepath)
 
     conn = sqlite3.connect(DB_PATH)
@@ -70,7 +63,7 @@ async def handle_image(event):
     conn.close()
 
     user_selected.pop(user_id, None)
-    await event.respond(f"Saved image for {product_type}")
+    await event.respond(f"✔ រូបភាពសម្រាប់ {product_type} បានរក្សាទុក")
 
 # ---------------- FLASK APP ----------------
 app = Flask(__name__, template_folder=".")
@@ -96,18 +89,7 @@ def get_items():
 @app.route("/")
 def index():
     items = get_items()
-    products_html = "".join([f"<li>{p}</li>" for p in PRODUCT_OPTIONS])
-    items_html = "".join([
-        f"<div class='product-card'><img src='{filename}' alt='{product_type}'><br>"
-        f"{product_type} {'<span class=\"new-label\">New</span>' if new_flag=='new' else ''}</div>"
-        for filename, product_type, new_flag in items
-    ])
-
-    with open("index.html") as f:
-        html_template = f.read()
-
-    html_output = html_template.replace("{{products}}", products_html).replace("{{items}}", items_html)
-    return html_output
+    return render_template("index.html", products=PRODUCT_OPTIONS, items=items)
 
 # ---------------- RUN FLASK ----------------
 def run_flask():
